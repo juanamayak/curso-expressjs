@@ -1,6 +1,10 @@
-require('dotenv').config();
+ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
+
+const fs = require('fs');
+const path = require('path');
+const usersFilePath = path.join(__dirname, 'users.json');
 
 const app = express();
 
@@ -56,6 +60,73 @@ app.post('/api/data', (req, res) => {
         data
     });
 });
+
+app.get('/users', (req, res) => {
+   fs.readFile(usersFilePath, 'utf8', (err, data) => {
+     if (err){
+         return res.status(500).send({
+             error: 'Error con conexión de datos'
+         });
+     }
+
+     const users = JSON.parse(data);
+     res.json(users);
+   })
+});
+
+app.post('/users', (req, res) => {
+   const user = req.body;
+
+   // TODO: Validacion de informacion
+
+
+   fs.readFile(usersFilePath, 'utf-8', (err, data) => {
+       if(err){
+           return res.status(500).send({
+               error: 'Error con conexión de datos'
+           });
+       }
+
+       const users = JSON.parse(data);
+       users.push(user);
+       fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
+           if (err){
+               return res.status(500).send({
+                   error: 'Error al guardar el usuario'
+               })
+           }
+           res.status(201).send(user);
+       })
+   })
+});
+
+app.put('/users/:id', (req, res) => {
+      const userId = req.params.id;
+      const updatedUser = req.body;
+
+    // TODO: Validacion de informacion
+
+    fs.readFile(usersFilePath, 'utf-8', (err, data) => {
+        if (err){
+            return res.status(500).send({
+                error: 'Error con conexión de datos'
+            });
+        }
+
+        let users = JSON.parse(data);
+        users = users.map(user => (user.id === userId ? {...user, ...updatedUser} : user));
+
+        fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
+            if (err){
+                return res.status(500).send({
+                    error: 'Error al actualizar el usuario'
+                })
+            }
+
+            res.json(updatedUser);
+        })
+    })
+})
 
 app.get('/', (req, res) => {
     res.send(`
