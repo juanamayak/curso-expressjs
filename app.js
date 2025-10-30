@@ -1,15 +1,18 @@
- require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-
 const fs = require('fs');
 const path = require('path');
 const usersFilePath = path.join(__dirname, 'users.json');
+const LoggerMiddleware = require('./middlewares/logger');
+const ErrorHandlerMiddleware = require('./middlewares/error-handlers');
 
 const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(LoggerMiddleware);
+app.use(ErrorHandlerMiddleware);
 
 const PORT = process.env.PORT || 3000;
 
@@ -126,6 +129,35 @@ app.put('/users/:id', (req, res) => {
             res.json(updatedUser);
         })
     })
+});
+
+
+app.delete('/users/:id', (req, res) => {
+    const userId = req.params.id;
+
+    fs.readFile(usersFilePath, 'utf-8', (err, data) => {
+        if (err){
+            return res.status(500).send({
+                error: 'Error con conexión de datos'
+            });
+        }
+
+        let users = JSON.parse(data);
+
+        users = users.filter(user => user.id !== userId);
+
+        fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
+            if (err){
+                return res.status(500).send({
+                    error: 'Error al eliminar el usuario'
+                });
+            }
+
+            res.status(204).send();
+        })
+    });
+
+
 })
 
 app.get('/', (req, res) => {
