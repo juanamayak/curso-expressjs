@@ -1,14 +1,20 @@
 require('dotenv').config();
 const express = require('express');
+const {PrismaClient} = require('@prisma/client');
+const prisma = new PrismaClient();
+
+const LoggerMiddleware = require('./middlewares/logger');
+const ErrorHandlerMiddleware = require('./middlewares/error-handlers');
+const AuthMiddleware = require('./middlewares/auth');
+// TODO: Clase de validaciones
+
 const bodyParser = require('body-parser');
+
 const fs = require('fs');
 const path = require('path');
 const usersFilePath = path.join(__dirname, 'users.json');
-const LoggerMiddleware = require('./middlewares/logger');
-const ErrorHandlerMiddleware = require('./middlewares/error-handlers');
 
 const app = express();
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(LoggerMiddleware);
@@ -48,7 +54,6 @@ app.post('/form', (req, res) => {
     })
 });
 
-
 app.post('/api/data', (req, res) => {
     const data = req.body;
 
@@ -65,52 +70,52 @@ app.post('/api/data', (req, res) => {
 });
 
 app.get('/users', (req, res) => {
-   fs.readFile(usersFilePath, 'utf8', (err, data) => {
-     if (err){
-         return res.status(500).send({
-             error: 'Error con conexión de datos'
-         });
-     }
+    fs.readFile(usersFilePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).send({
+                error: 'Error con conexión de datos'
+            });
+        }
 
-     const users = JSON.parse(data);
-     res.json(users);
-   })
+        const users = JSON.parse(data);
+        res.json(users);
+    })
 });
 
 app.post('/users', (req, res) => {
-   const user = req.body;
+    const user = req.body;
 
-   // TODO: Validacion de informacion
+    // TODO: Validacion de informacion
 
 
-   fs.readFile(usersFilePath, 'utf-8', (err, data) => {
-       if(err){
-           return res.status(500).send({
-               error: 'Error con conexión de datos'
-           });
-       }
+    fs.readFile(usersFilePath, 'utf-8', (err, data) => {
+        if (err) {
+            return res.status(500).send({
+                error: 'Error con conexión de datos'
+            });
+        }
 
-       const users = JSON.parse(data);
-       users.push(user);
-       fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
-           if (err){
-               return res.status(500).send({
-                   error: 'Error al guardar el usuario'
-               })
-           }
-           res.status(201).send(user);
-       })
-   })
+        const users = JSON.parse(data);
+        users.push(user);
+        fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
+            if (err) {
+                return res.status(500).send({
+                    error: 'Error al guardar el usuario'
+                })
+            }
+            res.status(201).send(user);
+        })
+    })
 });
 
 app.put('/users/:id', (req, res) => {
-      const userId = req.params.id;
-      const updatedUser = req.body;
+    const userId = req.params.id;
+    const updatedUser = req.body;
 
     // TODO: Validacion de informacion
 
     fs.readFile(usersFilePath, 'utf-8', (err, data) => {
-        if (err){
+        if (err) {
             return res.status(500).send({
                 error: 'Error con conexión de datos'
             });
@@ -120,7 +125,7 @@ app.put('/users/:id', (req, res) => {
         users = users.map(user => (user.id === userId ? {...user, ...updatedUser} : user));
 
         fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
-            if (err){
+            if (err) {
                 return res.status(500).send({
                     error: 'Error al actualizar el usuario'
                 })
@@ -131,12 +136,11 @@ app.put('/users/:id', (req, res) => {
     })
 });
 
-
 app.delete('/users/:id', (req, res) => {
     const userId = req.params.id;
 
     fs.readFile(usersFilePath, 'utf-8', (err, data) => {
-        if (err){
+        if (err) {
             return res.status(500).send({
                 error: 'Error con conexión de datos'
             });
@@ -147,7 +151,7 @@ app.delete('/users/:id', (req, res) => {
         users = users.filter(user => user.id !== userId);
 
         fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
-            if (err){
+            if (err) {
                 return res.status(500).send({
                     error: 'Error al eliminar el usuario'
                 });
@@ -168,6 +172,20 @@ app.get('/', (req, res) => {
    `);
 });
 
+app.get('/db-users', async (req, res) => {
+    try {
+        const users = await prisma.user.findMany();
+        res.json(users);
+    } catch (err) {
+        res.status(500).send({
+            error: 'Error al comunicarse con la base de datos.'
+        })
+    }
+});
+
+app.get('/protected-route', AuthMiddleware, (req, res) => {
+    res.send('Esta es una ruta protegida.');
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
