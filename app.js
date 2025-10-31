@@ -2,10 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const {PrismaClient} = require('@prisma/client');
 const prisma = new PrismaClient();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const LoggerMiddleware = require('./middlewares/logger');
-const ErrorHandlerMiddleware = require('./middlewares/error-handlers');
-const AuthMiddleware = require('./middlewares/auth');
+const LoggerMiddleware = require('./src/middlewares/logger');
+const ErrorHandlerMiddleware = require('./src/middlewares/error-handlers');
+const AuthMiddleware = require('./src/middlewares/auth');
 // TODO: Clase de validaciones
 
 const bodyParser = require('body-parser');
@@ -185,6 +187,40 @@ app.get('/db-users', async (req, res) => {
 
 app.get('/protected-route', AuthMiddleware, (req, res) => {
     res.send('Esta es una ruta protegida.');
+});
+
+app.post('/register', async (req, res) => {
+    const {email, password, name} = req.body;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+        data: {
+            email,
+            password: hashedPassword,
+            name,
+            role: 'USER'
+        }
+    });
+
+    res.status(200).json({
+        message: 'User registered successfully',
+    })
+});
+
+app.post('/login', async (req, res) => {
+    const {email, password} = req.body;
+    const user = await prisma.user.findUnique({where: {email}});
+
+    if (!user) return res.status(400).json({error: 'Invalid email or password'});
+
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) return res.status(400).json({error: 'Invalid email or password'});
+
+    const token = jwt.sign({id: user.id, role: user.role}, process.env.JWT_SECRET, {expiresIn: '4h'});
+
+    res.json({token});
 });
 
 app.listen(PORT, () => {
