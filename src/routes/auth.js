@@ -1,14 +1,13 @@
 const {Router} = require('express');
-
-const { register, login } = require('./controllers/authController');
-const AuthMiddleware = require("../middlewares/auth");
+const { register, login } = require('../controllers/authController');
+const AuthMiddleware = require('../middlewares/auth');
 
 const router = Router();
 
 router.post('/register', register);
-router.post('/register', login);
+router.post('/login', login);
 
-app.get('/protected-route', AuthMiddleware, (req, res) => {
+router.get('/protected-route', AuthMiddleware, (req, res) => {
     res.send('Esta es una ruta protegida.');
 });
 
