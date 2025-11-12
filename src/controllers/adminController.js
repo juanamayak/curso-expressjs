@@ -1,4 +1,4 @@
-const {createTimeBlockService, listReservationService} = require('../services/adminService');
+const {createTimeBlockService, listReservationsService} = require('../services/adminService');
 
 
 const createTimeBlock = async (req, res) => {
@@ -22,7 +22,7 @@ const listReservations = async (req, res) => {
     }
 
     try {
-        const reservations = await listReservationService(listReservations);
+        const reservations = await listReservationsService(listReservations);
         res.json(reservations);
     } catch (error) {
         res.status(500).json({error: 'Error fetching time block'});

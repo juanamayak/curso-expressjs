@@ -1,9 +1,9 @@
 const {Router} = require('express');
-const { createTimeBlock, listReservation} = require('../controllers/adminController');
+const { createTimeBlock, listReservations} = require('../controllers/adminController');
 const router = Router();
 
 
 router.post('time-blocks', createTimeBlock);
-router.get('/reservations', listReservation);
+router.get('/reservations', listReservations);
 
 module.exports = router;
